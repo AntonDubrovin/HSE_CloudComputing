@@ -1,0 +1,25 @@
+#cloud-config
+package_update: true
+packages:
+  - nginx
+
+write_files:
+  - path: /etc/nginx/sites-available/logbroker
+    content: |
+      upstream backends {
+          server ${backend1}:80;
+          server ${backend2}:80;
+      }
+      server {
+          listen 80;
+          location / {
+              proxy_pass http://backends;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+          }
+      }
+
+runcmd:
+  - rm -f /etc/nginx/sites-enabled/default
+  - ln -sf /etc/nginx/sites-available/logbroker /etc/nginx/sites-enabled/
+  - nginx -t && systemctl restart nginx

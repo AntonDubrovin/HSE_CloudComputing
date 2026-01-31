@@ -1,0 +1,30 @@
+#cloud-config
+package_update: true
+packages:
+  - python3
+  - python3-pip
+  - python3-venv
+
+write_files:
+  - path: /opt/logbroker/main.py
+    encoding: b64
+    content: ${python_code_b64}
+
+  - path: /etc/systemd/system/logbroker.service
+    content: |
+      [Unit]
+      Description=Logbroker
+      After=network.target
+      [Service]
+      WorkingDirectory=/opt/logbroker
+      Environment=CLICKHOUSE_URL=http://${clickhouse_ip}:8123
+      ExecStart=/opt/logbroker/venv/bin/uvicorn main:app --host 0.0.0.0 --port 80
+      Restart=always
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+  - python3 -m venv /opt/logbroker/venv
+  - /opt/logbroker/venv/bin/pip install fastapi uvicorn httpx
+  - systemctl daemon-reload
+  - systemctl enable --now logbroker

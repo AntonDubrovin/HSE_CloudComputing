@@ -1,0 +1,15 @@
+#cloud-config
+package_update: true
+packages:
+  - curl
+  - gnupg
+
+runcmd:
+  - curl -fsSL https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key | gpg --dearmor -o /usr/share/keyrings/clickhouse-keyring.gpg
+  - echo "deb [signed-by=/usr/share/keyrings/clickhouse-keyring.gpg] https://packages.clickhouse.com/deb stable main" > /etc/apt/sources.list.d/clickhouse.list
+  - apt-get update
+  - DEBIAN_FRONTEND=noninteractive apt-get install -y clickhouse-server clickhouse-client
+  - echo '<clickhouse><listen_host>0.0.0.0</listen_host></clickhouse>' > /etc/clickhouse-server/config.d/listen.xml
+  - systemctl enable --now clickhouse-server
+  - sleep 10
+  - clickhouse-client -q "CREATE TABLE IF NOT EXISTS default.logs (timestamp DateTime DEFAULT now(), level String, message String, source String) ENGINE = MergeTree() ORDER BY timestamp"
